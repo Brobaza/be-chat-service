@@ -1,0 +1,5 @@
+export enum OrderCancelledType {
+  PAYMENT_TIMEOUT = 'PAYMENT_TIMEOUT',
+  USER_CANCEL = 'USER_CANCEL',
+  ADMIN_CANCEL = 'ADMIN_CANCEL',
+}

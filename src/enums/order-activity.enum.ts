@@ -1,0 +1,5 @@
+export enum OrderActivity {
+  CREATED = 'CREATED',
+  CANCELLED = 'CANCELLED',
+  PAYMENT_COMPLETED = 'PAYMENT_COMPLETED',
+}

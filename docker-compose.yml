@@ -1,0 +1,19 @@
+services:
+  be-chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: be-chat-service
+    restart: unless-stopped
+    ports:
+      - 3006:3006
+      - 3005:3005
+    volumes:
+      - .:/app
+      - ./proto:/proto
+    networks:
+      - global_network
+
+networks:
+  global_network:
+    external: true

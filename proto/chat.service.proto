@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package chatProtoService;
+
+service ChatService {
+    rpc GetOnlineUsers(UserIdRequest) returns (GetOnlineUsersResponse) {}
+    rpc GetRelatedConversations(UserIdRequest) returns (GetRelatedConversationsResponse) {}
+    rpc GetConversationDetail(ConversationDetailRequest) returns (GetConversationDetailResponse) {}
+    rpc AddNewConversation(AddNewConversationRequest) returns (AddNewConversationResponse) {}
+}
+
+message MetadataDTO {
+    string message = 1;
+    string code = 2;
+    string errMessage = 3;
+}
+
+message UserIdRequest {
+    string userId = 1;
+    int32 limit = 2;
+    int32 page = 3;
+}
+
+message User {
+    string id = 1;
+    string name = 2;
+    string avatar = 3;
+    string phoneNumber = 4;
+    string country = 5;
+    string address = 6;
+    string state = 7;
+    string city = 8;
+    string zip_code = 9;
+    string about = 10;
+    string role = 11;
+    bool is_public = 12;
+    string email = 13;
+    string gender = 14;
+}
+
+message Mention {
+    string userId = 1;
+    string displayName = 2;
+    int32 startIndex = 3;
+    int32 endIndex = 4;
+}
+
+message Url {
+    string url = 1;
+    string thumbnailImage = 2;
+    int32 startIndex = 3;
+    int32 endIndex = 4;
+    string title = 5;
+    string description = 6;
+}
+
+message Emoji {
+    string emoji = 1;
+    string userId = 2;
+}
+
+message Message {
+    string id = 1;
+    string senderId = 2;
+    string body = 3;
+    string contentType = 4;
+    repeated Mention mentions = 5;
+    repeated Url previewUrl = 6;
+    repeated Emoji emojis = 7;
+
+    // date time
+    string createdAt = 8;
+    string updatedAt = 9;
+}
+
+
+message Attachment {
+    string id = 1;
+    string preview = 2;
+    string senderId = 3;
+    string name = 4;
+    string type = 5;
+}
+
+message Attachments {
+    repeated Attachment attachments = 1;
+    int32 total = 2;
+}
+
+message Links {
+    int32 total = 1;
+    repeated Url links = 2;
+}
+
+message Conversation {
+    string id = 1;
+    string type = 2;
+    repeated User participants = 3;
+    repeated Message messages = 4;
+    string lastActivity = 5;
+
+    // date time
+    string createdAt = 6;
+    string updatedAt = 7;
+
+    // other
+    Attachments attachments = 8;
+    Links links = 9;
+}
+
+message GetOnlineUsersResponse {
+    repeated User onlineUsers = 1;
+    int32 total = 2;
+    MetadataDTO metadata = 3;
+}
+
+message GetRelatedConversationsResponse {
+    repeated Conversation conversation = 1;
+    int32 total = 2;
+    MetadataDTO metadata = 3;
+}
+
+message ConversationDetailRequest {
+    string conversationId = 1;
+    string userId = 2;
+}
+
+message GetConversationDetailResponse {
+    Conversation data = 1;
+    MetadataDTO metadata = 2;
+}
+
+message AddNewConversationRequest {
+    string userId = 1;
+    string message = 2;
+    repeated string participants = 3;
+}
+
+message AddNewConversationResponse {
+    string conversationId = 1;
+    MetadataDTO metadata = 2;
+}

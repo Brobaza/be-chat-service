@@ -1,0 +1,22 @@
+import { CHAT_PROTO_SERVICE_PACKAGE_NAME } from '@/gen/chat.service';
+import { AUTH_PROTO_SERVICE_PACKAGE_NAME } from 'src/gen/auth.service';
+import { USER_PROTO_SERVICE_PACKAGE_NAME } from 'src/gen/user.service';
+
+export const UserMicroServiceName = 'USER_MICRO_SERVICE_NAME';
+export const MailMicroServiceName = 'MAIL_MICRO_SERVICE_NAME';
+export const AuthMicroServiceName = 'AUTH_MICRO_SERVICE_NAME';
+export const ChatMicroServiceName = 'CHAT_MICRO_SERVICE_NAME';
+
+export const enum MICROSERVICE_SERVICE_NAME {
+  USER_SERVICE = 'USER_MICRO_SERVICE_NAME',
+  MAIL_SERVICE = 'MAIL_MICRO_SERVICE_NAME',
+  AUTH_SERVICE = 'AUTH_MICRO_SERVICE_NAME',
+  CHAT_SERVICE = 'CHAT_MICRO_SERVICE_NAME',
+}
+
+export const enum MICROSERVICE_PACKAGE_NAME {
+  USER_SERVICE = USER_PROTO_SERVICE_PACKAGE_NAME,
+  MAIL_SERVICE = 'mail_service',
+  AUTH_SERVICE = AUTH_PROTO_SERVICE_PACKAGE_NAME,
+  CHAT_SERVICE = CHAT_PROTO_SERVICE_PACKAGE_NAME,
+}
