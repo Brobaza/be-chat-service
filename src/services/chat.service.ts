@@ -3,6 +3,7 @@ import { TransactionDomain } from '@/domains';
 import { S3Domain } from '@/domains/s3.domain';
 import { ConservationType } from '@/enums/conservation-type.enum';
 import { MessageType } from '@/enums/message-type.enum';
+import { QueueTopic } from '@/enums/queue-topic.enum';
 import { S3BucketType } from '@/enums/s3.enum';
 import { USER_SERVICE_NAME, UserServiceClient } from '@/gen/user.service';
 import { UploadMessageRequest } from '@/models/requests/upload-message.request';
@@ -12,6 +13,7 @@ import { Emoji } from '@/models/schema/emoji.schema';
 import { IMention, Message } from '@/models/schema/message.schema';
 import { User } from '@/models/schema/user.schema';
 import { trimObjectValues } from '@/pipes/trim-object-value.pipe';
+import { ProducerService } from '@/queue/base/producer.base-queue';
 import { convertToMessage } from '@/utils/converter';
 import { handleCrawUrl } from '@/utils/helper';
 import {
@@ -46,6 +48,8 @@ export class ChatService implements OnModuleInit {
 
     @Inject(MICROSERVICE_SERVICE_NAME.USER_SERVICE)
     private readonly client: ClientGrpcProxy,
+
+    private readonly produceService: ProducerService,
   ) {}
 
   onModuleInit() {
@@ -272,7 +276,7 @@ export class ChatService implements OnModuleInit {
         const isExist = await this.emoji_model.aggregate([
           {
             $match: {
-              user: new Types.ObjectId(userId),
+              user: userId,
             },
           },
           {
@@ -312,7 +316,7 @@ export class ChatService implements OnModuleInit {
           const newEmoji = await this.emoji_model.create(
             [
               {
-                user: new Types.ObjectId(userId),
+                user: userId,
                 emoji: emoji,
               },
             ],
@@ -343,25 +347,33 @@ export class ChatService implements OnModuleInit {
     body: { message: string },
     type: MessageType = MessageType.TEXT,
     mentions: IMention[] = [],
+    replyInfo: {
+      messageId: string;
+      body: string;
+      senderName: string;
+      isImage: boolean;
+    } | null = null,
   ) {
     const { message } = body;
 
     const previewUrl =
       type == MessageType.TEXT ? this.extractUrlsWithIndices(message) : [];
-    const fetchedPreviewUrl = await Promise.all(
-      previewUrl.map(async (item) => {
-        const { url, startIndex, endIndex } = item;
-        const data = await handleCrawUrl(url);
-        return {
-          url,
-          thumbnailImage: get(data, 'images[0]', ''),
-          startIndex,
-          endIndex,
-          description: get(data, 'description', ''),
-          title: get(data, 'title', ''),
-        };
-      }),
-    );
+
+    if (replyInfo) {
+      const { messageId } = replyInfo;
+
+      const isMessageExist = await this.message_model.findOne({
+        _id: new Types.ObjectId(messageId),
+      });
+
+      if (!isMessageExist) {
+        this.logger.error('Reply message not found');
+        throw new InternalServerErrorException({
+          stats: 400,
+          code: 'Message not found',
+        });
+      }
+    }
 
     const newMessage = await this.message_model.create([
       {
@@ -377,8 +389,9 @@ export class ChatService implements OnModuleInit {
             endIndex,
           };
         }),
-        previewUrl: !isEmpty(fetchedPreviewUrl) ? fetchedPreviewUrl : [],
+        // previewUrl: !isEmpty(fetchedPreviewUrl) ? fetchedPreviewUrl : [],
         emojis: [],
+        replyInfo: replyInfo,
       },
     ]);
 
@@ -389,6 +402,19 @@ export class ChatService implements OnModuleInit {
         $set: { lastActivity: new Date() },
       },
     );
+
+    await this.produceService.produce({
+      topic: QueueTopic.WEB_CRAWLER_TOPIC,
+      messages: [
+        {
+          value: JSON.stringify({
+            conversationId: conservationId,
+            messageId: newMessage[0]._id.toString(),
+            urls: previewUrl,
+          }),
+        },
+      ],
+    });
 
     return {
       conversationId: conservationId,
@@ -510,6 +536,40 @@ export class ChatService implements OnModuleInit {
     });
 
     return { success: true };
+  }
+
+  async deleteMessage(
+    conversationId: string,
+    messageId: string,
+    userId: string,
+  ) {
+    const isExist = await this.message_model.findOne({
+      _id: new Types.ObjectId(messageId),
+      senderId: userId,
+    });
+
+    if (!isExist) {
+      this.logger.error('Message not found or not sent by user');
+      throw new InternalServerErrorException({
+        stats: 400,
+        code: 'Message not found',
+      });
+    }
+
+    await this.message_model.deleteOne({ _id: messageId });
+
+    await this.conservation_model.updateOne(
+      { _id: conversationId },
+      { $pull: { messages: messageId } },
+    );
+
+    this.eventEmitter.emit('conversation.delete_message', {
+      conversationId,
+      userId,
+      messageId,
+    });
+
+    return true;
   }
 
   extractUrlsWithIndices(text: string) {

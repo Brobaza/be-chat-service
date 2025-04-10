@@ -5,6 +5,7 @@ import {
   Links,
   Mention,
   Message,
+  ReplyInfo,
   Url,
   User,
 } from '@/gen/chat.service';
@@ -26,6 +27,7 @@ export const convertToUser = (user: any): User => {
     role: get(user, 'role', ''),
     isPublic: get(user, 'isPublic', false),
     gender: get(user, 'gender', ''),
+    location: get(user, 'location', ''),
   };
 };
 
@@ -56,6 +58,15 @@ export const convertToEmoji = (emoji: any): Emoji => {
   };
 };
 
+export const convertToReplyInfo = (replyInfo: any): ReplyInfo => {
+  return {
+    messageId: get(replyInfo, 'messageId', ''),
+    body: get(replyInfo, 'body', ''),
+    isImage: get(replyInfo, 'isImage', false),
+    senderName: get(replyInfo, 'senderName', ''),
+  };
+};
+
 export const convertToMessage = (message: any): Message => {
   const createAt = get(message, 'createdAt', new Date());
   const updatedAt = get(message, 'updatedAt', new Date());
@@ -68,6 +79,7 @@ export const convertToMessage = (message: any): Message => {
     mentions: get(message, 'mentions', []).map(convertToMention),
     previewUrl: get(message, 'previewUrl', []).map(convertToUrl),
     emojis: get(message, 'emojis', []).map(convertToEmoji),
+    replyInfo: convertToReplyInfo(get(message, 'replyInfo', {})),
 
     // date time
     createdAt: isDate(createAt) ? createAt.toISOString() : createAt,

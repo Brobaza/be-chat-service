@@ -86,6 +86,10 @@ export interface Configuration {
     string,
     { prefix: string; version: string; container_name: string; port: string }
   >;
+  stream: {
+    api_key: string;
+    secret_key: string;
+  };
 }
 
 const grpcUrlSchema = joi.string().required();
@@ -212,6 +216,12 @@ const configSchema = joi.object<Configuration>({
     })
     .required(),
   services: servicesSchema.required(),
+  stream: joi
+    .object({
+      api_key: joi.string().required(),
+      secret_key: joi.string().required(),
+    })
+    .required(),
 });
 
 export const loadConfiguration = (): Configuration => {

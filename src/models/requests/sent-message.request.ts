@@ -11,4 +11,11 @@ export class SentMessageRequest {
   conversationId: string;
 
   mentions?: IMention[];
+
+  replyInfo?: {
+    messageId: string;
+    body: string;
+    senderName: string;
+    isImage: boolean;
+  };
 }

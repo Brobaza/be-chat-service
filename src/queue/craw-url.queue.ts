@@ -7,10 +7,11 @@ import { get } from 'lodash';
 import { CacheDomain } from 'src/domains/cache.domain';
 import { RedisKey } from 'src/enums/redis-key.enum';
 import { ConsumerService } from './base/consumer.base-queue';
+import * as crypto from 'crypto';
 
 @Injectable()
-export class WishlistQueueService implements OnModuleInit {
-  logger = new Logger(WishlistQueueService.name);
+export class CrawUrlQueueService implements OnModuleInit {
+  logger = new Logger(CrawUrlQueueService.name);
 
   constructor(
     private readonly consumerService: ConsumerService,
@@ -19,8 +20,9 @@ export class WishlistQueueService implements OnModuleInit {
     private readonly messageService: MessagesService,
   ) {}
 
-  getCacheKey(): string {
-    return RedisKey.WEB_CRAWLER;
+  getCacheKey(url: string): string {
+    const hash = crypto.createHash('md5').update(url).digest('hex');
+    return `preview:${hash}`;
   }
 
   async resetCache(key: string): Promise<void> {
@@ -72,33 +74,40 @@ export class WishlistQueueService implements OnModuleInit {
 
   async crawWebData(parsedMessage: any) {
     const { conversationId, messageId, urls } = parsedMessage;
-    this.logger.log(
-      `Fetching data from URLs: ${urls} for conversationId: ${conversationId} in message ID: ${messageId}`,
-    );
 
     const fetchedPreviewUrl = await Promise.all(
-      (urls || [])?.map(
-        async (item: { url: string; startIndex: number; endIndex: number }) => {
-          const { url, startIndex, endIndex } = item;
-          const data = await handleCrawUrl(url);
-          return {
-            url,
-            thumbnailImage: get(data, 'images[0]', ''),
-            startIndex,
-            endIndex,
-            description: get(data, 'description', ''),
-            title: get(data, 'title', ''),
-          };
-        },
-      ),
+      (urls || []).map(async ({ url, startIndex, endIndex }) => {
+        const cacheKey = this.getCacheKey(url);
+        let data: any;
+
+        const cached = await this.cacheDomain.getRedisClient().get(cacheKey);
+        if (!cached) {
+          this.logger.log(`Cache miss for URL: ${url}`);
+          data = await handleCrawUrl(url);
+
+          await this.cacheDomain
+            .getRedisClient()
+            .set(cacheKey, JSON.stringify(data), 'EX', 3600);
+        } else {
+          this.logger.log(`Cache hit for URL: ${url}`);
+          data = JSON.parse(cached);
+        }
+
+        return {
+          url,
+          thumbnailImage: get(data, 'images[0]', ''),
+          startIndex,
+          endIndex,
+          description: get(data, 'description', ''),
+          title: get(data, 'title', ''),
+        };
+      }),
     );
 
     await this.messageService.updateMessageByCrawUrl(
       messageId,
       fetchedPreviewUrl,
     );
-
-    this.logger.log(`Fetched data: ${JSON.stringify(fetchedPreviewUrl)}`);
 
     this.eventEmitter.emit('conversation.craw_url', {
       conversationId,

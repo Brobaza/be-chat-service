@@ -3,10 +3,38 @@ syntax = "proto3";
 package chatProtoService;
 
 service ChatService {
+    // * chat
     rpc GetOnlineUsers(UserIdRequest) returns (GetOnlineUsersResponse) {}
     rpc GetRelatedConversations(UserIdRequest) returns (GetRelatedConversationsResponse) {}
     rpc GetConversationDetail(ConversationDetailRequest) returns (GetConversationDetailResponse) {}
     rpc AddNewConversation(AddNewConversationRequest) returns (AddNewConversationResponse) {}
+    rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse) {}
+
+    // * stream
+    rpc GetStreamToken(GetStreamTokenRequest) returns (GetStreamTokenResponse) {}
+}
+
+message GetStreamTokenRequest {
+    string userId = 1;
+    string conversationId = 2;
+}
+
+message GetStreamTokenResponse {
+    string token = 1;
+    string userId = 2;
+    string conversationId = 3;
+    MetadataDTO metadata = 4;
+}
+
+message DeleteMessageRequest {
+    string conversationId = 1;
+    string messageId = 2;
+    string userId = 3;
+}
+
+message DeleteMessageResponse {
+    string messageId = 1;
+    MetadataDTO metadata = 2;
 }
 
 message MetadataDTO {
@@ -36,6 +64,7 @@ message User {
     bool is_public = 12;
     string email = 13;
     string gender = 14;
+    string location = 15;
 }
 
 message Mention {
@@ -59,6 +88,13 @@ message Emoji {
     string userId = 2;
 }
 
+message ReplyInfo {
+    string messageId = 1;
+    string body = 2;
+    bool isImage = 3;
+    string senderName = 4;
+}
+
 message Message {
     string id = 1;
     string senderId = 2;
@@ -67,10 +103,11 @@ message Message {
     repeated Mention mentions = 5;
     repeated Url previewUrl = 6;
     repeated Emoji emojis = 7;
+    ReplyInfo replyInfo = 8;
 
     // date time
-    string createdAt = 8;
-    string updatedAt = 9;
+    string createdAt = 9;
+    string updatedAt = 10;
 }
 
 

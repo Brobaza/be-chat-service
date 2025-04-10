@@ -16,7 +16,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { forEach, includes, map, trim } from 'lodash';
+import { forEach, get, includes, map, trim } from 'lodash';
 import { Server } from 'socket.io';
 import { v4 } from 'uuid';
 
@@ -61,8 +61,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('send-message')
   async handleSendMessage(
     @ConnectedSocket() client: CustomSocket,
-    @MessageBody() { content, conversationId, mentions }: SentMessageRequest,
+    @MessageBody()
+    body: SentMessageRequest,
   ) {
+    const { content, conversationId, mentions } = body;
+
     const trimmedContent = trim(content);
 
     const { messageId } = await this.chatService.sendMessageToConversation(
@@ -71,6 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       { message: trimmedContent },
       MessageType.TEXT,
       mentions,
+      get(body, 'replyInfo', null),
     );
 
     if (!trimmedContent) {
@@ -79,16 +83,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    console.log('send 1 message', {
-      content: trimmedContent,
-    });
-
     this.server.to(conversationId).emit('messages', {
       content: trimmedContent,
       sender: client.handshake.currentUserId,
       conversationId,
       mentions: map(mentions, (mention) => ({ ...mention, id: v4() })),
       messageId,
+      replyInfo: get(body, 'replyInfo', null),
     });
   }
 
@@ -119,10 +120,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     type: MessageType;
     messageId: string;
   }) {
-    console.log('send 2 message', {
-      content: payload.body.content,
-    });
-
     this.server.to(payload.conversationId).emit('messages', {
       content: payload.body.content,
       sender: payload.userId,
@@ -132,7 +129,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  // !TODO: remove this event when we have a better way to handle craw url
   @OnEvent('conversation.craw_url')
   handleCrawUrlEvent(payload: {
     conversationId: string;
@@ -142,6 +138,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(payload.conversationId).emit('receive-craw-url', {
       messageId: payload.messageId,
       previewUrl: payload.previewUrl,
+      conversationId: payload.conversationId,
+    });
+  }
+
+  @OnEvent('conversation.delete_message')
+  async handleDeleteMessageEvent(payload: {
+    conversationId: string;
+    messageId: string;
+    userId: string;
+  }) {
+    const { conversationId, messageId } = payload;
+
+    this.server.to(conversationId).emit('delete-message', {
+      messageId,
+      conversationId,
     });
   }
 
@@ -170,10 +181,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         socket.join(conversationId);
       }
     }
-
-    console.log('send 3 message', {
-      content: payload.body.message,
-    });
 
     this.server.to(conversationId).emit('messages', {
       content: payload.body.message,

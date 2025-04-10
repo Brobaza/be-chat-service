@@ -5,10 +5,33 @@
 // source: chat.service.proto
 
 /* eslint-disable */
-import { GrpcMethod, GrpcStreamMethod } from '@nestjs/microservices';
-import { Observable } from 'rxjs';
+import { GrpcMethod, GrpcStreamMethod } from "@nestjs/microservices";
+import { Observable } from "rxjs";
 
-export const protobufPackage = 'chatProtoService';
+export const protobufPackage = "chatProtoService";
+
+export interface GetStreamTokenRequest {
+  userId: string;
+  conversationId: string;
+}
+
+export interface GetStreamTokenResponse {
+  token: string;
+  userId: string;
+  conversationId: string;
+  metadata: MetadataDTO | undefined;
+}
+
+export interface DeleteMessageRequest {
+  conversationId: string;
+  messageId: string;
+  userId: string;
+}
+
+export interface DeleteMessageResponse {
+  messageId: string;
+  metadata: MetadataDTO | undefined;
+}
 
 export interface MetadataDTO {
   message: string;
@@ -37,6 +60,7 @@ export interface User {
   isPublic: boolean;
   email: string;
   gender: string;
+  location: string;
 }
 
 export interface Mention {
@@ -60,6 +84,13 @@ export interface Emoji {
   userId: string;
 }
 
+export interface ReplyInfo {
+  messageId: string;
+  body: string;
+  isImage: boolean;
+  senderName: string;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -68,6 +99,9 @@ export interface Message {
   mentions: Mention[];
   previewUrl: Url[];
   emojis: Emoji[];
+  replyInfo:
+    | ReplyInfo
+    | undefined;
   /** date time */
   createdAt: string;
   updatedAt: string;
@@ -138,31 +172,32 @@ export interface AddNewConversationResponse {
   metadata: MetadataDTO | undefined;
 }
 
-export const CHAT_PROTO_SERVICE_PACKAGE_NAME = 'chatProtoService';
+export const CHAT_PROTO_SERVICE_PACKAGE_NAME = "chatProtoService";
 
 export interface ChatServiceClient {
+  /** chat */
+
   getOnlineUsers(request: UserIdRequest): Observable<GetOnlineUsersResponse>;
 
-  getRelatedConversations(
-    request: UserIdRequest,
-  ): Observable<GetRelatedConversationsResponse>;
+  getRelatedConversations(request: UserIdRequest): Observable<GetRelatedConversationsResponse>;
 
-  getConversationDetail(
-    request: ConversationDetailRequest,
-  ): Observable<GetConversationDetailResponse>;
+  getConversationDetail(request: ConversationDetailRequest): Observable<GetConversationDetailResponse>;
 
-  addNewConversation(
-    request: AddNewConversationRequest,
-  ): Observable<AddNewConversationResponse>;
+  addNewConversation(request: AddNewConversationRequest): Observable<AddNewConversationResponse>;
+
+  deleteMessage(request: DeleteMessageRequest): Observable<DeleteMessageResponse>;
+
+  /** stream */
+
+  getStreamToken(request: GetStreamTokenRequest): Observable<GetStreamTokenResponse>;
 }
 
 export interface ChatServiceController {
+  /** chat */
+
   getOnlineUsers(
     request: UserIdRequest,
-  ):
-    | Promise<GetOnlineUsersResponse>
-    | Observable<GetOnlineUsersResponse>
-    | GetOnlineUsersResponse;
+  ): Promise<GetOnlineUsersResponse> | Observable<GetOnlineUsersResponse> | GetOnlineUsersResponse;
 
   getRelatedConversations(
     request: UserIdRequest,
@@ -173,51 +208,43 @@ export interface ChatServiceController {
 
   getConversationDetail(
     request: ConversationDetailRequest,
-  ):
-    | Promise<GetConversationDetailResponse>
-    | Observable<GetConversationDetailResponse>
-    | GetConversationDetailResponse;
+  ): Promise<GetConversationDetailResponse> | Observable<GetConversationDetailResponse> | GetConversationDetailResponse;
 
   addNewConversation(
     request: AddNewConversationRequest,
-  ):
-    | Promise<AddNewConversationResponse>
-    | Observable<AddNewConversationResponse>
-    | AddNewConversationResponse;
+  ): Promise<AddNewConversationResponse> | Observable<AddNewConversationResponse> | AddNewConversationResponse;
+
+  deleteMessage(
+    request: DeleteMessageRequest,
+  ): Promise<DeleteMessageResponse> | Observable<DeleteMessageResponse> | DeleteMessageResponse;
+
+  /** stream */
+
+  getStreamToken(
+    request: GetStreamTokenRequest,
+  ): Promise<GetStreamTokenResponse> | Observable<GetStreamTokenResponse> | GetStreamTokenResponse;
 }
 
 export function ChatServiceControllerMethods() {
   return function (constructor: Function) {
     const grpcMethods: string[] = [
-      'getOnlineUsers',
-      'getRelatedConversations',
-      'getConversationDetail',
-      'addNewConversation',
+      "getOnlineUsers",
+      "getRelatedConversations",
+      "getConversationDetail",
+      "addNewConversation",
+      "deleteMessage",
+      "getStreamToken",
     ];
     for (const method of grpcMethods) {
-      const descriptor: any = Reflect.getOwnPropertyDescriptor(
-        constructor.prototype,
-        method,
-      );
-      GrpcMethod('ChatService', method)(
-        constructor.prototype[method],
-        method,
-        descriptor,
-      );
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("ChatService", method)(constructor.prototype[method], method, descriptor);
     }
     const grpcStreamMethods: string[] = [];
     for (const method of grpcStreamMethods) {
-      const descriptor: any = Reflect.getOwnPropertyDescriptor(
-        constructor.prototype,
-        method,
-      );
-      GrpcStreamMethod('ChatService', method)(
-        constructor.prototype[method],
-        method,
-        descriptor,
-      );
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("ChatService", method)(constructor.prototype[method], method, descriptor);
     }
   };
 }
 
-export const CHAT_SERVICE_NAME = 'ChatService';
+export const CHAT_SERVICE_NAME = "ChatService";

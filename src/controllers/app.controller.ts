@@ -1,3 +1,4 @@
+import { StreamDomain } from '@/domains/stream.domain';
 import { ErrorDictionary } from '@/enums/error-dictionary.enum';
 import {
   AddNewConversationRequest,
@@ -5,9 +6,13 @@ import {
   ChatServiceController,
   ChatServiceControllerMethods,
   ConversationDetailRequest,
+  DeleteMessageRequest,
+  DeleteMessageResponse,
   GetConversationDetailResponse,
   GetOnlineUsersResponse,
   GetRelatedConversationsResponse,
+  GetStreamTokenRequest,
+  GetStreamTokenResponse,
   UserIdRequest,
 } from '@/gen/chat.service';
 import { User } from '@/models/schema/user.schema';
@@ -16,13 +21,93 @@ import { ChatService } from '@/services/chat.service';
 import { convertToConversation, convertToUser } from '@/utils/converter';
 import { Controller, Logger } from '@nestjs/common';
 import { get, map } from 'lodash';
+import { Observable } from 'rxjs';
 
 @Controller()
 @ChatServiceControllerMethods()
 export class AppController implements ChatServiceController {
   logger = new Logger(AppController.name);
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly streamDomain: StreamDomain,
+  ) {}
+
+  async getStreamToken(
+    request: GetStreamTokenRequest,
+  ): Promise<GetStreamTokenResponse> {
+    try {
+      const { userId, conversationId } = request;
+      this.logger.log(
+        `Fetching stream token for userId: ${userId}, conversationId: ${conversationId}`,
+      );
+      const token = await this.streamDomain.genToken(userId);
+
+      return {
+        token: token,
+        conversationId: conversationId,
+        userId: userId,
+        metadata: {
+          code: '200',
+          message: 'OK',
+          errMessage: '',
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error in getStreamToken', error);
+
+      return {
+        token: '',
+        conversationId: request.conversationId,
+        userId: request.userId,
+        metadata: {
+          code: JSON.stringify(get(error, 'response.status', '500')),
+          message: get(
+            error,
+            'response.code',
+            ErrorDictionary.INTERNAL_SERVER_ERROR,
+          ),
+          errMessage: error.message,
+        },
+      };
+    }
+  }
+
+  async deleteMessage(
+    request: DeleteMessageRequest,
+  ): Promise<DeleteMessageResponse> {
+    try {
+      const { conversationId, messageId, userId } = request;
+      this.logger.log(
+        `Deleting message for conversationId: ${conversationId}, messageId: ${messageId}, userId: ${userId}`,
+      );
+      await this.chatService.deleteMessage(conversationId, messageId, userId);
+
+      return {
+        messageId: messageId,
+        metadata: {
+          code: '200',
+          message: 'OK',
+          errMessage: '',
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error in deleteMessage', error);
+
+      return {
+        messageId: '',
+        metadata: {
+          code: JSON.stringify(get(error, 'response.status', '500')),
+          message: get(
+            error,
+            'response.code',
+            ErrorDictionary.INTERNAL_SERVER_ERROR,
+          ),
+          errMessage: error.message,
+        },
+      };
+    }
+  }
 
   async getOnlineUsers(
     request: UserIdRequest,

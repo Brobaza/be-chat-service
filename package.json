@@ -38,6 +38,7 @@
     "@nestjs/throttler": "^6.4.0",
     "@nestjs/websockets": "^11.0.11",
     "@socket.io/redis-adapter": "^8.3.0",
+    "@stream-io/node-sdk": "^0.4.21",
     "@types/bcrypt": "^5.0.2",
     "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.8",

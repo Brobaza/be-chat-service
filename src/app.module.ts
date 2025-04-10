@@ -40,6 +40,8 @@ import { AppService } from './services/app.service';
 import { ChatService } from './services/chat.service';
 import { ConversationService } from './services/conversation.service';
 import { MessagesService } from './services/message.service';
+import { CrawUrlQueueService } from './queue/craw-url.queue';
+import { StreamDomain } from './domains/stream.domain';
 
 @Module({
   imports: [
@@ -162,6 +164,7 @@ import { MessagesService } from './services/message.service';
     CacheDomain,
     TransactionDomain,
     S3Domain,
+    StreamDomain,
 
     // * services
     // UsersService,
@@ -188,6 +191,7 @@ import { MessagesService } from './services/message.service';
     // * queue
     ConsumerService,
     ProducerService,
+    CrawUrlQueueService,
   ],
 })
 export class AppModule {}

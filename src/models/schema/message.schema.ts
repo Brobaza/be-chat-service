@@ -65,6 +65,23 @@ export class Message extends BaseEntity {
     title: string;
   }[];
 
+  @Prop({
+    type: {
+      messageId: String,
+      body: String,
+      senderName: String,
+      isImage: Boolean,
+    },
+    default: null,
+    required: false,
+  })
+  replyInfo: {
+    messageId: string;
+    body: string;
+    senderName: string;
+    isImage: boolean;
+  };
+
   @Prop({ types: [{ type: Types.ObjectId }], ref: 'Emoji', default: [] })
   emojis: Emoji[];
 }
