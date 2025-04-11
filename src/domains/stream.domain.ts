@@ -22,4 +22,15 @@ export class StreamDomain implements OnModuleInit {
       role: 'user',
     });
   }
+
+  async createUser(userId: string, data: { name: string; avatar: string }) {
+    const user = await this.streamClient.upsertUsers([
+      {
+        id: userId,
+        name: data.name,
+        image: data.avatar,
+      },
+    ]);
+    return user;
+  }
 }

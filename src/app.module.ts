@@ -42,6 +42,7 @@ import { ConversationService } from './services/conversation.service';
 import { MessagesService } from './services/message.service';
 import { CrawUrlQueueService } from './queue/craw-url.queue';
 import { StreamDomain } from './domains/stream.domain';
+import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
 
 @Module({
   imports: [
@@ -61,14 +62,6 @@ import { StreamDomain } from './domains/stream.domain';
     }),
 
     MongooseModule.forFeature([
-      // {
-      //   name: User.name,
-      //   schema: UserSchema,
-      // },
-      // {
-      //   name: Session.name,
-      //   schema: SessionSchema,
-      // },
       {
         name: Conversation.name,
         schema: ConversationSchema,
@@ -146,13 +139,7 @@ import { StreamDomain } from './domains/stream.domain';
       ],
     }),
   ],
-  controllers: [
-    AppController,
-    // AuthController,
-    // UserController,
-    ChatController,
-    FileController,
-  ],
+  controllers: [AppController, ChatController, FileController],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: AppClassSerializerInterceptor },
 
@@ -167,20 +154,13 @@ import { StreamDomain } from './domains/stream.domain';
     StreamDomain,
 
     // * services
-    // UsersService,
-    // SessionService,
-    // AuthService,
     MessagesService,
     ConversationService,
     ChatService,
 
     // * repositories
-    // UsersRepository,
-    // SessionsRepository,
 
     // * strategies
-    // JwtAccessTokenStrategy,
-    // JwtRefreshTokenStrategy,
 
     // * gateway
     ChatGateway,
@@ -192,6 +172,7 @@ import { StreamDomain } from './domains/stream.domain';
     ConsumerService,
     ProducerService,
     CrawUrlQueueService,
+    SyncStreamUserQueueService,
   ],
 })
 export class AppModule {}

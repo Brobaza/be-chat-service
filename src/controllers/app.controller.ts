@@ -21,7 +21,6 @@ import { ChatService } from '@/services/chat.service';
 import { convertToConversation, convertToUser } from '@/utils/converter';
 import { Controller, Logger } from '@nestjs/common';
 import { get, map } from 'lodash';
-import { Observable } from 'rxjs';
 
 @Controller()
 @ChatServiceControllerMethods()
