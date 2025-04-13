@@ -12,6 +12,17 @@ service ChatService {
 
     // * stream
     rpc GetStreamToken(GetStreamTokenRequest) returns (GetStreamTokenResponse) {}
+    rpc CheckMeetingAllowance(CheckMeetingAllowanceRequest) returns (CheckMeetingAllowanceRequestResponse) {}
+}
+
+message CheckMeetingAllowanceRequest {
+    string userId = 1;
+    string conversationId = 2;
+}
+
+message CheckMeetingAllowanceRequestResponse {
+    bool isAllowed = 1;
+    MetadataDTO metadata = 2;
 }
 
 message GetStreamTokenRequest {

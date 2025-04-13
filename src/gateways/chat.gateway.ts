@@ -1,7 +1,9 @@
+import { StreamDomain } from '@/domains/stream.domain';
 import { ErrorDictionary } from '@/enums/error-dictionary.enum';
 import { MessageType } from '@/enums/message-type.enum';
 import { SocketNamespace } from '@/enums/socket-namespace.enum';
 import { CustomSocket } from '@/models/interfaces/socket.interface';
+import { CreateMeetingRequest } from '@/models/requests/create-call.request';
 import { SentMessageRequest } from '@/models/requests/sent-message.request';
 import { UploadEmojiRequest } from '@/models/requests/upload-emoji.request';
 import { UploadMessageRequest } from '@/models/requests/upload-message.request';
@@ -16,7 +18,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { forEach, get, includes, map, trim } from 'lodash';
+import { forEach, get, includes, isNil, map, trim } from 'lodash';
 import { Server } from 'socket.io';
 import { v4 } from 'uuid';
 
@@ -34,7 +36,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @WebSocketServer() private readonly server: Server;
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly streamDomain: StreamDomain,
+  ) {}
 
   getServer() {
     return this.server;
@@ -56,6 +61,66 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: CustomSocket) {
     client.leave(this.CHANNEL);
+  }
+
+  @SubscribeMessage('end-meeting')
+  async handleEndMeeting(
+    @ConnectedSocket() client: CustomSocket,
+    @MessageBody() body: CreateMeetingRequest,
+  ) {
+    const { conversationId, callType } = body;
+
+    const metadata = await this.chatService.endMeeting(
+      client.handshake.currentUserId,
+      conversationId,
+      callType,
+    );
+
+    if (isNil(metadata)) {
+      client.emit('errors', { message: ErrorDictionary.BAD_REQUEST });
+
+      return;
+    }
+
+    const { body: bodyMessage, messageId } = metadata;
+
+    this.server.to(conversationId).emit('messages', {
+      content: bodyMessage,
+      sender: client.handshake.currentUserId,
+      conversationId,
+      type: MessageType.NOTI,
+      messageId,
+    });
+  }
+
+  @SubscribeMessage('create-meeting')
+  async handleCreateMeeting(
+    @ConnectedSocket() client: CustomSocket,
+    @MessageBody() body: CreateMeetingRequest,
+  ) {
+    const { conversationId, callType } = body;
+
+    const metadata = await this.chatService.startMeeting(
+      client.handshake.currentUserId,
+      conversationId,
+      callType,
+    );
+
+    if (isNil(metadata)) {
+      client.emit('errors', { message: ErrorDictionary.BAD_REQUEST });
+
+      return;
+    }
+
+    const { body: bodyMessage, messageId, messageType } = metadata;
+
+    this.server.to(conversationId).emit('messages', {
+      content: bodyMessage,
+      sender: client.handshake.currentUserId,
+      conversationId,
+      type: messageType,
+      messageId,
+    });
   }
 
   @SubscribeMessage('send-message')

@@ -10,6 +10,16 @@ import { Observable } from "rxjs";
 
 export const protobufPackage = "chatProtoService";
 
+export interface CheckMeetingAllowanceRequest {
+  userId: string;
+  conversationId: string;
+}
+
+export interface CheckMeetingAllowanceRequestResponse {
+  isAllowed: boolean;
+  metadata: MetadataDTO | undefined;
+}
+
 export interface GetStreamTokenRequest {
   userId: string;
   conversationId: string;
@@ -190,6 +200,8 @@ export interface ChatServiceClient {
   /** stream */
 
   getStreamToken(request: GetStreamTokenRequest): Observable<GetStreamTokenResponse>;
+
+  checkMeetingAllowance(request: CheckMeetingAllowanceRequest): Observable<CheckMeetingAllowanceRequestResponse>;
 }
 
 export interface ChatServiceController {
@@ -223,6 +235,13 @@ export interface ChatServiceController {
   getStreamToken(
     request: GetStreamTokenRequest,
   ): Promise<GetStreamTokenResponse> | Observable<GetStreamTokenResponse> | GetStreamTokenResponse;
+
+  checkMeetingAllowance(
+    request: CheckMeetingAllowanceRequest,
+  ):
+    | Promise<CheckMeetingAllowanceRequestResponse>
+    | Observable<CheckMeetingAllowanceRequestResponse>
+    | CheckMeetingAllowanceRequestResponse;
 }
 
 export function ChatServiceControllerMethods() {
@@ -234,6 +253,7 @@ export function ChatServiceControllerMethods() {
       "addNewConversation",
       "deleteMessage",
       "getStreamToken",
+      "checkMeetingAllowance",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);

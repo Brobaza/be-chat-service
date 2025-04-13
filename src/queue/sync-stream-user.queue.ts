@@ -44,7 +44,7 @@ export class SyncStreamUserQueueService implements OnModuleInit {
               `Error processing message: ${error.message}`,
               error.stack,
             );
-            pause();
+            // pause();
           }
         },
       },

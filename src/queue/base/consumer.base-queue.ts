@@ -1,20 +1,34 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Scope,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Consumer, ConsumerRunConfig, ConsumerSubscribeTopics, Kafka } from 'kafkajs';
+import {
+  Consumer,
+  ConsumerRunConfig,
+  ConsumerSubscribeTopics,
+  Kafka,
+} from 'kafkajs';
 
-@Injectable()
-export class ConsumerService implements OnModuleInit, OnModuleDestroy {
+@Injectable({
+  scope: Scope.TRANSIENT,
+})
+export class ConsumerService implements OnModuleDestroy {
   private kafkaClient: Kafka;
   private consumers: Map<string | RegExp, Consumer> = new Map();
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {
+    console.log(this.configService.get<string[]>('kafka'));
 
-  async onModuleInit() {
     this.kafkaClient = new Kafka({
       brokers: this.configService.get<string[]>('kafka.brokers'),
       clientId: this.configService.get<string>('kafka.groupId'),
     });
   }
+
+  // async onModuleInit() {}
 
   async onModuleDestroy() {
     for (const consumer of this.consumers.values()) {
@@ -23,6 +37,8 @@ export class ConsumerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async consume(topic: ConsumerSubscribeTopics, config: ConsumerRunConfig) {
+    console.log('run consumer', topic, config);
+
     const topicName = topic.topics[0];
     const consumer = this.kafkaClient.consumer({
       groupId: this.configService.get<string>('kafka.groupId'),
@@ -35,6 +51,14 @@ export class ConsumerService implements OnModuleInit, OnModuleDestroy {
       autoCommit: false,
     });
 
+    consumer.on('consumer.connect', () => {
+      console.log(`Consumer connected to topic ${topicName}`);
+    });
+
+    consumer.on('consumer.disconnect', () => {
+      console.warn(`Consumer disconnected from topic ${topicName}`);
+    });
+
     this.consumers.set(topicName, consumer);
   }
 
@@ -44,6 +68,8 @@ export class ConsumerService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`No consumer found for topic ${topic}`);
     }
 
-    await consumer.commitOffsets([{ topic, partition, offset: (Number(offset) + 1).toString() }]);
+    await consumer.commitOffsets([
+      { topic, partition, offset: (Number(offset) + 1).toString() },
+    ]);
   }
 }

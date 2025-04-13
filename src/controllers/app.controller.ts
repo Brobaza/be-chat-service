@@ -5,6 +5,8 @@ import {
   AddNewConversationResponse,
   ChatServiceController,
   ChatServiceControllerMethods,
+  CheckMeetingAllowanceRequest,
+  CheckMeetingAllowanceRequestResponse,
   ConversationDetailRequest,
   DeleteMessageRequest,
   DeleteMessageResponse,
@@ -21,6 +23,7 @@ import { ChatService } from '@/services/chat.service';
 import { convertToConversation, convertToUser } from '@/utils/converter';
 import { Controller, Logger } from '@nestjs/common';
 import { get, map } from 'lodash';
+import { Observable } from 'rxjs';
 
 @Controller()
 @ChatServiceControllerMethods()
@@ -31,6 +34,46 @@ export class AppController implements ChatServiceController {
     private readonly chatService: ChatService,
     private readonly streamDomain: StreamDomain,
   ) {}
+
+  async checkMeetingAllowance(
+    request: CheckMeetingAllowanceRequest,
+  ): Promise<CheckMeetingAllowanceRequestResponse> {
+    const { userId, conversationId } = request;
+    this.logger.log(
+      `Checking meeting allowance for userId: ${userId}, conversationId: ${conversationId}`,
+    );
+
+    try {
+      const isAllowed = await this.chatService.checkMeetingAllowance(
+        userId,
+        conversationId,
+      );
+
+      return {
+        isAllowed: isAllowed,
+        metadata: {
+          code: '200',
+          message: 'OK',
+          errMessage: '',
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error in checkMeetingAllowance', error);
+
+      return {
+        isAllowed: false,
+        metadata: {
+          code: JSON.stringify(get(error, 'response.status', '500')),
+          message: get(
+            error,
+            'response.code',
+            ErrorDictionary.INTERNAL_SERVER_ERROR,
+          ),
+          errMessage: error.message,
+        },
+      };
+    }
+  }
 
   async getStreamToken(
     request: GetStreamTokenRequest,

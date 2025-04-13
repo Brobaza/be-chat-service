@@ -3,4 +3,6 @@ export enum MessageType {
   IMAGE = 'image',
   VIDEO = 'video',
   FILE = 'file',
+  CALL = 'call',
+  NOTI = 'noti',
 }

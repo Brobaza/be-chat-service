@@ -65,7 +65,7 @@ export class CrawUrlQueueService implements OnModuleInit {
               `Error processing message: ${error.message}`,
               error.stack,
             );
-            pause();
+            // pause();
           }
         },
       },

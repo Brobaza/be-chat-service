@@ -1,6 +1,8 @@
 import { MICROSERVICE_SERVICE_NAME } from '@/constraints/microservice.constraint';
 import { TransactionDomain } from '@/domains';
 import { S3Domain } from '@/domains/s3.domain';
+import { StreamDomain } from '@/domains/stream.domain';
+import { CallType } from '@/enums/call-type.enum';
 import { ConservationType } from '@/enums/conservation-type.enum';
 import { MessageType } from '@/enums/message-type.enum';
 import { QueueTopic } from '@/enums/queue-topic.enum';
@@ -26,7 +28,20 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ClientGrpcProxy } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
-import { flatten, get, isEmpty, keyBy, map, size, some, uniq } from 'lodash';
+import {
+  flatten,
+  get,
+  isEmpty,
+  isNil,
+  keyBy,
+  map,
+  size,
+  some,
+  split,
+  takeRight,
+  uniq,
+  join,
+} from 'lodash';
 import { Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 
@@ -50,11 +65,25 @@ export class ChatService implements OnModuleInit {
     private readonly client: ClientGrpcProxy,
 
     private readonly produceService: ProducerService,
+    private readonly streamDomain: StreamDomain,
   ) {}
 
   onModuleInit() {
     this.userDomain =
       this.client.getService<UserServiceClient>(USER_SERVICE_NAME);
+  }
+
+  async checkMeetingAllowance(userId: string, conversationId: string) {
+    const conversation = await this.conservation_model.findOne({
+      _id: new Types.ObjectId(conversationId),
+      participants: { $in: [userId] },
+    });
+
+    if (!conversation) {
+      return false;
+    }
+
+    return !isNil(conversation);
   }
 
   async findAllUsers(userId: string): Promise<{
@@ -581,5 +610,128 @@ export class ChatService implements OnModuleInit {
       startIndex: match.index ?? -1,
       endIndex: match.index !== undefined ? match.index + match[0].length : -1,
     }));
+  }
+
+  async startMeeting(
+    userId: string,
+    conversationId: string,
+    callType: CallType,
+  ) {
+    console.log('start meeting: ', userId, conversationId, callType);
+    const call = await this.streamDomain.getCall(conversationId, callType);
+    const created_by = get(call, 'call.created_by', null);
+
+    if (isNil(created_by)) {
+      console.log('current call', call);
+      this.logger.error('Call not found');
+      return null;
+    }
+
+    let body = '';
+    const user = await firstValueFrom(this.userDomain.getUser({ id: userId }));
+
+    if (created_by.id === userId) {
+      body = `${this.getName(user.name)} đã bắt đầu ${this.getNameCallType(callType)}`;
+      const newMessage = await this.message_model.create([
+        {
+          senderId: userId,
+          body,
+          contentType: MessageType.CALL,
+        },
+      ]);
+
+      await this.conservation_model.updateOne(
+        { _id: new Types.ObjectId(conversationId) },
+        {
+          $push: { messages: newMessage[0]._id },
+          $set: { lastActivity: new Date() },
+        },
+      );
+
+      return {
+        messageId: newMessage[0]._id.toString(),
+        conversationId: conversationId,
+        callType: callType,
+        userInfo: {
+          id: user.id,
+          name: this.getName(user.name),
+          avatar: user.avatar,
+        },
+        body: body,
+        messageType: MessageType.CALL,
+      };
+    } else {
+      body = `${this.getName(user.name)} đã tham gia ${this.getNameCallType(callType)}`;
+      const newMessage = await this.message_model.create([
+        {
+          senderId: userId,
+          body,
+          contentType: MessageType.NOTI,
+        },
+      ]);
+
+      await this.conservation_model.updateOne(
+        { _id: new Types.ObjectId(conversationId) },
+        {
+          $push: { messages: newMessage[0]._id },
+          $set: { lastActivity: new Date() },
+        },
+      );
+
+      return {
+        messageId: newMessage[0]._id.toString(),
+        conversationId: conversationId,
+        callType: callType,
+        userInfo: {
+          id: user.id,
+          name: this.getName(user.name),
+          avatar: user.avatar,
+        },
+        body: body,
+        messageType: MessageType.NOTI,
+      };
+    }
+  }
+
+  async endMeeting(userId: string, conversationId: string, callType: CallType) {
+    const body = `${this.getNameCallType(callType)} đã kết thúc`;
+    const newMessage = await this.message_model.create([
+      {
+        senderId: userId,
+        body,
+        contentType: MessageType.NOTI,
+      },
+    ]);
+
+    await this.conservation_model.updateOne(
+      { _id: new Types.ObjectId(conversationId) },
+      {
+        $push: { messages: newMessage[0]._id },
+        $set: { lastActivity: new Date() },
+      },
+    );
+
+    return {
+      messageId: newMessage[0]._id.toString(),
+      conversationId: conversationId,
+      callType: callType,
+      body: body,
+      messageType: MessageType.NOTI,
+    };
+  }
+
+  getNameCallType(callType: CallType) {
+    switch (callType) {
+      case CallType.PRIVATE_VIDEO_CALL:
+        return 'Cuộc gọi video';
+      case CallType.PRIVATE_VOICE_CALL:
+        return 'Cuộc gọi thoại';
+      default:
+        return 'unknown';
+    }
+  }
+
+  getName(name: string) {
+    return join(takeRight(split(name, ' '), 2), ' ');
   }
 }

@@ -21,6 +21,7 @@ import { FileController } from './controllers/file.controller';
 import { TransactionDomain } from './domains';
 import { CacheDomain } from './domains/cache.domain';
 import { S3Domain } from './domains/s3.domain';
+import { StreamDomain } from './domains/stream.domain';
 import { ChatGateway } from './gateways/chat.gateway';
 import { ClientNotificationsGateway } from './gateways/client-notifications.gateway';
 import { AppClassSerializerInterceptor } from './interceptors/mongo-class-serializer.interceptor';
@@ -34,14 +35,13 @@ import { Emoji, EmojiSchema } from './models/schema/emoji.schema';
 import { Message, MessageSchema } from './models/schema/message.schema';
 import { ConsumerService } from './queue/base/consumer.base-queue';
 import { ProducerService } from './queue/base/producer.base-queue';
+import { CrawUrlQueueService } from './queue/craw-url.queue';
 import { ConversationsRepository } from './repo/conversation.repo';
 import { MessagesRepository } from './repo/message.repo';
 import { AppService } from './services/app.service';
 import { ChatService } from './services/chat.service';
 import { ConversationService } from './services/conversation.service';
 import { MessagesService } from './services/message.service';
-import { CrawUrlQueueService } from './queue/craw-url.queue';
-import { StreamDomain } from './domains/stream.domain';
 import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
 
 @Module({

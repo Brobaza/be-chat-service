@@ -183,7 +183,7 @@ const configSchema = joi.object<Configuration>({
     .required(),
   kafka: joi
     .object({
-      brokers: joi.array().items(joi.string().uri()).required(),
+      brokers: joi.array().items(joi.string()).required(),
       groupId: joi.string().required(),
       topics: joi
         .array()

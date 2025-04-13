@@ -1,3 +1,4 @@
+import { CallType } from '@/enums/call-type.enum';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StreamClient } from '@stream-io/node-sdk';
@@ -32,5 +33,14 @@ export class StreamDomain implements OnModuleInit {
       },
     ]);
     return user;
+  }
+
+  async getCall(callId: string, callType: CallType) {
+    const call = await this.streamClient.video.getCall({
+      type: callType,
+      id: callId,
+    });
+
+    return call;
   }
 }
