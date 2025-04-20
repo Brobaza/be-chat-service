@@ -1,5 +1,7 @@
+import { QueueTopic } from '@/enums/queue-topic.enum';
 import {
   Injectable,
+  Logger,
   OnModuleDestroy,
   OnModuleInit,
   Scope,
@@ -11,24 +13,70 @@ import {
   ConsumerSubscribeTopics,
   Kafka,
 } from 'kafkajs';
+import { forEach } from 'lodash';
+import { CrawUrlQueueService } from '../craw-url.queue';
+import { SyncStreamUserQueueService } from '../sync-stream-user.queue';
 
-@Injectable({
-  scope: Scope.TRANSIENT,
-})
-export class ConsumerService implements OnModuleDestroy {
+@Injectable()
+export class ConsumerService implements OnModuleInit, OnModuleDestroy {
   private kafkaClient: Kafka;
   private consumers: Map<string | RegExp, Consumer> = new Map();
+  logger = new Logger(ConsumerService.name);
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+
+    // * Queue services
+    private readonly crawUrlQueueService: CrawUrlQueueService,
+    private readonly syncStreamUserQueueService: SyncStreamUserQueueService,
+  ) {}
+
+  async onModuleInit() {
     console.log(this.configService.get<string[]>('kafka'));
 
     this.kafkaClient = new Kafka({
       brokers: this.configService.get<string[]>('kafka.brokers'),
       clientId: this.configService.get<string>('kafka.groupId'),
     });
-  }
 
-  // async onModuleInit() {}
+    await this.consume(
+      {
+        topics: [QueueTopic.WEB_CRAWLER_TOPIC, QueueTopic.SYNC_STREAM_USER],
+        fromBeginning: true,
+      },
+      {
+        eachMessage: async ({ topic, partition, message, heartbeat }) => {
+          try {
+            const parsedMessage = JSON.parse(message.value.toString());
+            this.logger.log('Parsed message: ', parsedMessage);
+
+            switch (topic) {
+              case QueueTopic.WEB_CRAWLER_TOPIC:
+                await this.crawUrlQueueService.crawWebData(parsedMessage);
+                break;
+              case QueueTopic.SYNC_STREAM_USER:
+                await this.syncStreamUserQueueService.syncStreamUser(
+                  parsedMessage,
+                );
+                break;
+              default:
+                this.logger.warn(`Unknown topic: ${topic}`);
+                break;
+            }
+
+            await this.commitOffset(topic, partition, message.offset);
+
+            await heartbeat();
+          } catch (error) {
+            this.logger.error(
+              `Error processing message: ${error.message}`,
+              error.stack,
+            );
+          }
+        },
+      },
+    );
+  }
 
   async onModuleDestroy() {
     for (const consumer of this.consumers.values()) {
@@ -39,27 +87,20 @@ export class ConsumerService implements OnModuleDestroy {
   async consume(topic: ConsumerSubscribeTopics, config: ConsumerRunConfig) {
     console.log('run consumer', topic, config);
 
-    const topicName = topic.topics[0];
-    const consumer = this.kafkaClient.consumer({
-      groupId: this.configService.get<string>('kafka.groupId'),
-    });
+    forEach(topic.topics, async (topicName) => {
+      const consumer = this.kafkaClient.consumer({
+        groupId: this.configService.get<string>('kafka.groupId'),
+      });
 
-    await consumer.connect();
-    await consumer.subscribe(topic);
-    await consumer.run({
-      ...config,
-      autoCommit: false,
-    });
+      await consumer.connect();
+      await consumer.subscribe(topic);
+      await consumer.run({
+        ...config,
+        autoCommit: false,
+      });
 
-    consumer.on('consumer.connect', () => {
-      console.log(`Consumer connected to topic ${topicName}`);
+      this.consumers.set(topicName, consumer);
     });
-
-    consumer.on('consumer.disconnect', () => {
-      console.warn(`Consumer disconnected from topic ${topicName}`);
-    });
-
-    this.consumers.set(topicName, consumer);
   }
 
   async commitOffset(topic: string, partition: number, offset: string) {
