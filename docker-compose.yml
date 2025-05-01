@@ -2,7 +2,7 @@ services:
   be-chat-service:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.debug
     container_name: be-chat-service
     restart: unless-stopped
     ports:

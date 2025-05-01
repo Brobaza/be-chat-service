@@ -1,5 +1,7 @@
 import { StreamDomain } from '@/domains/stream.domain';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+
+@Injectable()
 export class SyncStreamUserQueueService {
   logger = new Logger(SyncStreamUserQueueService.name);
 
@@ -9,15 +11,34 @@ export class SyncStreamUserQueueService {
     const { userId, name, avatar } = message;
     this.logger.log(`Syncing stream user: ${userId}`);
 
-    try {
-      const user = await this.streamDomain.createUser(userId, { name, avatar });
+    const maxRetries = 3;
+    const delayMs = 2000;
 
-      this.logger.log(`Generated token for user ${userId}: ${user}`);
-    } catch (error) {
-      this.logger.error(
-        `Error syncing stream user: ${error.message}`,
-        error.stack,
-      );
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const user = await this.streamDomain.createUser(userId, {
+          name,
+          avatar,
+        });
+        this.logger.log(`Generated token for user ${userId}: ${user}`);
+        break;
+      } catch (error) {
+        this.logger.error(
+          `Attempt ${attempt} - Error syncing stream user: ${error.message}`,
+          error.stack,
+        );
+
+        if (attempt < maxRetries) {
+          this.logger.warn(`Retrying in ${delayMs}ms...`);
+          await this.delay(delayMs);
+        } else {
+          this.logger.error(`Failed to sync after ${maxRetries} attempts.`);
+        }
+      }
     }
+  }
+
+  private delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

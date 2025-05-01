@@ -20,6 +20,8 @@ export class CacheDomain {
 
     const { host, port, database, password } = configs;
 
+    this.logger.log('Redis config', { host, port, database, password });
+
     this.redisClients = new Redis({ host, port, db: database, password });
 
     this.redisClients.on('connect', () =>

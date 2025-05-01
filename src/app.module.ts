@@ -82,6 +82,7 @@ import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
         const { host, port, database, password } = configService.get('redis');
+        console.log('Redis config', { host, port, database, password });
         return {
           store: await redisStore({
             database,

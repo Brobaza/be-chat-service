@@ -55,22 +55,35 @@ export interface UserIdRequest {
   page: number;
 }
 
+export interface UserAbout {
+  workRole: string;
+  company: string;
+  country: string;
+  totalFollowers: number;
+  totalFollowing: number;
+  quote: string;
+  facebook: string;
+  twitter: string;
+  linkedin: string;
+  instagram: string;
+  school: string;
+}
+
 export interface User {
   id: string;
   name: string;
   avatar: string;
   phoneNumber: string;
-  country: string;
   address: string;
-  state: string;
-  city: string;
-  zipCode: string;
-  about: string;
-  role: string;
+  location: string;
+  about: UserAbout | undefined;
   isPublic: boolean;
   email: string;
   gender: string;
-  location: string;
+  phoneVerifiedAt: string;
+  emailVerifiedAt: string;
+  status: string;
+  role: string;
 }
 
 export interface Mention {

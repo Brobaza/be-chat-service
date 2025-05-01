@@ -1,0 +1,103 @@
+port: 3005
+prefix: /api
+version: '1'
+isProd: false
+grpcUrl: '0.0.0.0:3006'
+
+frontendUrl: http://localhost:3000
+verificationPath:
+  register: /verify-email
+  resetPassword: /reset-password
+
+redis:
+  host: redis
+  port: 6379
+  password: ''
+  database: 0
+  prefix: 'dailydev'
+
+postgres:
+  host: postgres
+  port: 5432
+  username: postgres
+  password: postgres
+  database: postgres
+
+agenda:
+  uri: mongodb://localhost:27017
+  collection: jobs
+  database: agenda
+
+mongo:
+  uri: mongodb://mongodb:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.4.0
+  username: root
+  password: '123456'
+  port: 27017
+  database: dailydev
+
+smtp:
+  host: localhost
+  port: 1025
+  username: ''
+  password: ''
+  secure: false
+  from: 'no-reply@daily-devAgendaModule.com'
+
+verificationExpiresIn:
+  register: 10 # minutes
+  resetPassword: 10 # minutes
+
+jwt:
+  accessTokenExpiresIn: 3 # days
+  refreshTokenExpiresIn: 30 # days
+
+kafka:
+  brokers:
+    - kafka:29092
+  groupId: queue-service
+  topics:
+    - name: topic1
+      partitions: 3
+      replicationFactor: 1
+
+redisLock:
+  driftFactor: 0.01
+  retryJitter: 200
+  retryCount: 100
+  retryDelay: 200
+
+aws:
+  accessKeyId: 'AKIAQEIP3OJ3V546WQUP'
+  secretAccessKey: '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'
+  region: 'ap-southeast-1'
+  s3:
+    bucket: 'dailydev-clone-ap-southeast-1'
+    url: 'https://dailydev-clone-ap-southeast-1.s3.ap-southeast-1.amazonaws.com/IMAGE_VALUE'
+  ses:
+    from: '123nguyenbahoangkien123@gmail.com'
+
+services:
+  auth:
+    prefix: /api
+    version: '1'
+    container_name: be-auth-service
+    port: '3002'
+  user:
+    prefix: /api
+    version: '1'
+    container_name: be-user-service
+    port: '3004'
+  mail:
+    prefix: /api
+    version: '1'
+    container_name: be-user-service
+    port: '3004'
+  chat:
+    prefix: /api
+    version: '1'
+    container_name: be-chat-service
+    port: '3006'
+
+stream:
+  api_key: 'egqcfc56j6dz'
+  secret_key: '2as7n62fyxcm76gbnhu2nrs22gazjsqrwvrrradpxfcd69hd8gjadbee5as6qmze'
