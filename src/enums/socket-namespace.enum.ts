@@ -1,5 +1,4 @@
 export enum SocketNamespace {
-  CLIENT_NOTIFICATIONS = 'client-notifications',
-  ADMIN_NOTIFICATIONS = 'admin-notifications',
+  CLIENT_NOTIFICATIONS = 'notifications',
   CHAT = 'chat',
 }

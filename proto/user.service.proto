@@ -18,6 +18,74 @@ service UserService {
     rpc deleteAddress(DeleteAddressRequest) returns (ManageAddressResponse) {}
     rpc getAddress(GetAddressRequest) returns (GetAddressResponse) {}
     rpc getDefaultAddress(GetDefaultAddressRequest) returns (GetDefaultAddressResponse) {}
+
+    // * friend request
+    rpc getListFriendRequest(getListFriendRequestReq) returns (getListFriendRequestRes) {}
+    rpc updateStatusFriendRequest(updateStatusFriendRequestReq) returns (ManageUserResponse) {}
+    rpc isOnFriendList(isOnFriendListReq) returns (isOnFriendListRes) {}
+    rpc sendFriendRequest(sendFriendRequestReq) returns (sendFriendRequestRes) {}
+
+    // * test
+    rpc mockFriendList(mockFriendListReq) returns (mockFriendListRes) {}
+}
+
+message mockFriendListReq {
+    string userId = 1;
+}
+
+message mockFriendListRes {
+    repeated GetUserResponse friends = 1;
+    int32 total = 2;
+    Metadata metadata = 3;
+}
+
+message sendFriendRequestReq {
+    string userId = 1;
+    string friendId = 2;
+}
+
+message sendFriendRequestRes {
+    string id = 1;
+    Metadata metadata = 2;
+}
+
+message isOnFriendListReq {
+    string userId = 1;
+    string friendId = 2;
+}
+
+message isOnFriendListRes {
+    bool confirm = 1;
+    Metadata metadata = 2;
+}
+
+message Metadata {
+    string message = 2;
+    string code = 3;
+    string errMessage = 4;
+}
+
+message getListFriendRequestReq {
+    string userId = 1;
+    int32 limit = 2;
+    int32 page = 3;
+}
+
+message getListFriendRequestRes {
+    repeated GetUserResponse friendRequests = 1;
+    int32 total = 2;
+    Metadata metadata = 3;
+}
+
+message updateStatusFriendRequestReq {
+    string userId = 1;
+    string friendRequestId = 2;
+    string status = 3; // accept or reject
+}
+
+message rejectFriendRequestReq {
+    string userId = 1;
+    string friendRequestId = 2;
 }
 
 message GetAllRelatedFriendRequest {
