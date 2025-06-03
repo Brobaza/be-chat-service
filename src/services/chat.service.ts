@@ -436,6 +436,7 @@ export class ChatService implements OnModuleInit {
       topic: QueueTopic.WEB_CRAWLER_TOPIC,
       messages: [
         {
+          key: conservationId,
           value: JSON.stringify({
             conversationId: conservationId,
             messageId: newMessage[0]._id.toString(),

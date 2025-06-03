@@ -43,6 +43,12 @@ import { ChatService } from './services/chat.service';
 import { ConversationService } from './services/conversation.service';
 import { MessagesService } from './services/message.service';
 import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
+import {
+  Notification,
+  NotificationSchema,
+} from './models/schema/notification.schema';
+import { NotificationsRepository } from './repo/notification.repo';
+import { NotificationsService } from './services/notification.service';
 
 @Module({
   imports: [
@@ -73,6 +79,10 @@ import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
       {
         name: Emoji.name,
         schema: EmojiSchema,
+      },
+      {
+        name: Notification.name,
+        schema: NotificationSchema,
       },
     ]),
 
@@ -158,8 +168,12 @@ import { SyncStreamUserQueueService } from './queue/sync-stream-user.queue';
     MessagesService,
     ConversationService,
     ChatService,
+    NotificationsService,
 
     // * repositories
+    ConversationsRepository,
+    MessagesRepository,
+    NotificationsRepository,
 
     // * strategies
 
